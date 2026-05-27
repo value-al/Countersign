@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Public API snapshot test (PublicApiGenerator) that guards against accidental breaking changes.
+- `net48` test leg that exercises the `netstandard2.0` build on .NET Framework.
+- `SECURITY.md` (threat model + private vulnerability reporting), `CONTRIBUTING.md`,
+  `CODE_OF_CONDUCT.md`, issue/PR templates, and Dependabot.
+- Release automation: a GitHub Actions workflow publishes to NuGet on a `v*` tag.
+
 ## [0.1.0-alpha.1] - 2026-05-27
 
 ### Added

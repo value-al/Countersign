@@ -137,11 +137,23 @@ own for any provider. The presets emit ASCII metadata followed by the **raw body
 - Anything else: write a one-line `CanonicalFormBuilder`. Match the provider's separators and byte order
   exactly — a single stray newline changes the HMAC.
 
+## Security
+
+Countersign is a signing/verification **primitive**, so its boundaries matter:
+
+- **It provides** HMAC authenticity, constant-time comparison, replay tolerance, and exact-byte signing.
+- **It does not** store/rotate your secrets, provide transport security (use TLS), or parse provider
+  headers — you extract the signature value(s) and pass them in.
+
+Treat every non-`Valid` result as "reject". See [SECURITY.md](SECURITY.md) for the full threat model
+and how to report a vulnerability privately.
+
 ## Status
 
 `0.1.0-alpha` — `Sign`/`Verify`, raw-byte bodies, canonical-form presets, constant-time compare, replay
-tolerance, and multi-signature verification are implemented and covered by 22 tests (including RFC 4231
-known-answer vectors). Not yet published to NuGet. See [CHANGELOG.md](CHANGELOG.md).
+tolerance, and multi-signature verification are implemented and covered by 23 tests (including RFC 4231
+known-answer vectors), running on `net8.0` and `net48`. The public API is snapshot-tested. Not yet
+published to NuGet. See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

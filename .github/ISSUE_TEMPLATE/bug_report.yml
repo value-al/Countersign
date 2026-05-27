@@ -1,0 +1,38 @@
+name: Bug report
+description: Something isn't working as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do **not** include real secrets or signatures. Redact them.
+        For security vulnerabilities, use Security → Advisories → "Report a vulnerability" instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal repro
+      description: Smallest code snippet that reproduces it (canonical form, encoding, algorithm).
+      render: csharp
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Countersign version
+      placeholder: 0.1.0-alpha.1
+    validations:
+      required: true
+  - type: input
+    id: tfm
+    attributes:
+      label: Target framework
+      placeholder: net8.0 / net48 / netstandard2.0 consumer
+    validations:
+      required: true

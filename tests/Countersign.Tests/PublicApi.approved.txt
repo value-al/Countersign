@@ -1,0 +1,53 @@
+[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/value-al/Countersign")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v8.0", FrameworkDisplayName=".NET 8.0")]
+namespace Countersign
+{
+    public delegate byte[] CanonicalFormBuilder(Countersign.SignatureContext context);
+    public static class CanonicalForms
+    {
+        public static readonly Countersign.CanonicalFormBuilder MethodPathTimestampBody;
+        public static readonly Countersign.CanonicalFormBuilder RawBody;
+        public static readonly Countersign.CanonicalFormBuilder TimestampDotBody;
+    }
+    public sealed class RequestSigner
+    {
+        public RequestSigner(byte[] secret, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureAlgorithm algorithm = 0, Countersign.SignatureEncoding encoding = 0) { }
+        public RequestSigner(string secret, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureAlgorithm algorithm = 0, Countersign.SignatureEncoding encoding = 0) { }
+        public string Sign(Countersign.SignatureContext context) { }
+    }
+    public enum SignatureAlgorithm
+    {
+        HmacSha256 = 0,
+        HmacSha512 = 1,
+    }
+    public sealed class SignatureContext
+    {
+        public SignatureContext(byte[] body, string? timestamp = null, string? method = null, string? path = null, System.Collections.Generic.IReadOnlyDictionary<string, string>? extras = null) { }
+        public SignatureContext(string body, string? timestamp = null, string? method = null, string? path = null, System.Collections.Generic.IReadOnlyDictionary<string, string>? extras = null) { }
+        public byte[] Body { get; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string>? Extras { get; }
+        public string? Method { get; }
+        public string? Path { get; }
+        public string? Timestamp { get; }
+    }
+    public enum SignatureEncoding
+    {
+        Hex = 0,
+        HexUpper = 1,
+        Base64 = 2,
+    }
+    public enum VerificationResult
+    {
+        Valid = 0,
+        SignatureMismatch = 1,
+        MalformedSignature = 2,
+        Expired = 3,
+    }
+    public sealed class WebhookVerifier
+    {
+        public WebhookVerifier(byte[] webhookSecret, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureAlgorithm algorithm = 0, Countersign.SignatureEncoding encoding = 0, System.TimeSpan? tolerance = default, System.Func<System.DateTimeOffset>? clock = null) { }
+        public WebhookVerifier(string webhookSecret, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureAlgorithm algorithm = 0, Countersign.SignatureEncoding encoding = 0, System.TimeSpan? tolerance = default, System.Func<System.DateTimeOffset>? clock = null) { }
+        public Countersign.VerificationResult Verify(Countersign.SignatureContext context, System.Collections.Generic.IEnumerable<string> providedSignatures, System.DateTimeOffset? messageTimestamp = default) { }
+        public Countersign.VerificationResult Verify(Countersign.SignatureContext context, string providedSignature, System.DateTimeOffset? messageTimestamp = default) { }
+    }
+}

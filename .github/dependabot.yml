@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Keep GitHub Actions versions current (e.g. the Node-20 runner deprecation).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+
+  # NuGet: the library has no runtime dependencies, but this covers build/test tooling.
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps

@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest an addition (note Countersign's deliberately small scope)
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Countersign stays a small, dependency-free signing/verification primitive. Provider SDKs,
+        HTTP plumbing, and secret storage are intentionally out of scope — but a new canonical form,
+        encoding, or correctness/security improvement is very welcome.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that's awkward or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would the API or behavior look like?
+    validations:
+      required: true
