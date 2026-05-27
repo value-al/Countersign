@@ -16,7 +16,9 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <!-- TODO(#325): set RepositoryUrl / PackageProjectUrl once the GitHub repo exists. -->
+    <PackageProjectUrl>https://github.com/value-al/Countersign</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/value-al/Countersign</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
