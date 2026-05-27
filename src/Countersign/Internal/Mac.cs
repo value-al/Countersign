@@ -1,15 +1,13 @@
 using System.Security.Cryptography;
-using System.Text;
 
 namespace Countersign.Internal;
 
 internal static class Mac
 {
-    public static byte[] Compute(byte[] secret, string message, SignatureAlgorithm algorithm)
+    public static byte[] Compute(byte[] secret, byte[] message, SignatureAlgorithm algorithm)
     {
-        byte[] data = Encoding.UTF8.GetBytes(message);
         using HMAC hmac = Create(algorithm, secret);
-        return hmac.ComputeHash(data);
+        return hmac.ComputeHash(message);
     }
 
     public static bool FixedTimeEquals(byte[] a, byte[] b)

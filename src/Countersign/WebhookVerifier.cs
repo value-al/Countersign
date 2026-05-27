@@ -20,10 +20,10 @@ public sealed class WebhookVerifier
 
     /// <summary>Creates a verifier from a raw webhook secret.</summary>
     /// <param name="webhookSecret">The provider's webhook signing key. Must not be empty.</param>
-    /// <param name="canonicalForm">How the provider builds the string it signs. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
+    /// <param name="canonicalForm">How the provider builds the bytes it signs. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
     /// <param name="algorithm">The HMAC algorithm. Defaults to <see cref="SignatureAlgorithm.HmacSha256"/>.</param>
     /// <param name="encoding">How the provider encodes the signature. Defaults to <see cref="SignatureEncoding.Hex"/>.</param>
-    /// <param name="tolerance">Optional maximum clock skew for the message timestamp. When set, <see cref="Verify"/> requires a timestamp and rejects messages outside the window.</param>
+    /// <param name="tolerance">Optional maximum clock skew for the message timestamp. When set, verification requires a timestamp and rejects messages outside the window.</param>
     /// <param name="clock">Optional time source, for testing. Defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
     /// <exception cref="ArgumentNullException"><paramref name="webhookSecret"/> is null.</exception>
     /// <exception cref="ArgumentException"><paramref name="webhookSecret"/> is empty.</exception>
@@ -55,7 +55,7 @@ public sealed class WebhookVerifier
 
     /// <summary>Creates a verifier from a UTF-8 string webhook secret.</summary>
     /// <param name="webhookSecret">The provider's webhook signing key. Must not be null or empty.</param>
-    /// <param name="canonicalForm">How the provider builds the string it signs. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
+    /// <param name="canonicalForm">How the provider builds the bytes it signs. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
     /// <param name="algorithm">The HMAC algorithm. Defaults to <see cref="SignatureAlgorithm.HmacSha256"/>.</param>
     /// <param name="encoding">How the provider encodes the signature. Defaults to <see cref="SignatureEncoding.Hex"/>.</param>
     /// <param name="tolerance">Optional maximum clock skew for the message timestamp.</param>
@@ -101,28 +101,75 @@ public sealed class WebhookVerifier
             return VerificationResult.SignatureMismatch;
         }
 
-        if (_tolerance.HasValue)
+        return CheckTimestamp(messageTimestamp);
+    }
+
+    /// <summary>
+    /// Verifies against several candidate signatures, succeeding if <b>any</b> matches. Useful during
+    /// key rotation, when a provider sends signatures under both the old and new keys.
+    /// </summary>
+    /// <param name="context">The webhook parts the canonical form needs.</param>
+    /// <param name="providedSignatures">The candidate signatures received from the provider.</param>
+    /// <param name="messageTimestamp">The webhook's timestamp; required when a tolerance was configured.</param>
+    /// <returns><see cref="VerificationResult.Valid"/> if any signature matches (and the timestamp, if checked, is fresh); otherwise <see cref="VerificationResult.SignatureMismatch"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="context"/> or <paramref name="providedSignatures"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="providedSignatures"/> is empty, or a tolerance was configured but <paramref name="messageTimestamp"/> was not supplied.</exception>
+    public VerificationResult Verify(SignatureContext context, IEnumerable<string> providedSignatures, DateTimeOffset? messageTimestamp = null)
+    {
+        if (context is null)
         {
-            if (messageTimestamp is null)
-            {
-                throw new ArgumentException(
-                    "A message timestamp is required because this verifier was configured with a tolerance.",
-                    nameof(messageTimestamp));
-            }
+            throw new ArgumentNullException(nameof(context));
+        }
 
-            TimeSpan skew = _clock() - messageTimestamp.Value;
-            if (skew < TimeSpan.Zero)
-            {
-                skew = skew.Negate();
-            }
+        if (providedSignatures is null)
+        {
+            throw new ArgumentNullException(nameof(providedSignatures));
+        }
 
-            if (skew > _tolerance.Value)
+        byte[] expected = Mac.Compute(_webhookSecret, _canonicalForm(context), _algorithm);
+
+        bool any = false;
+        bool matched = false;
+        foreach (string candidate in providedSignatures)
+        {
+            any = true;
+            if (candidate is not null
+                && SignatureEncoder.TryDecode(candidate, _encoding, out byte[] provided)
+                && Mac.FixedTimeEquals(expected, provided))
             {
-                return VerificationResult.Expired;
+                matched = true; // keep iterating so timing doesn't reveal which candidate matched
             }
         }
 
-        return VerificationResult.Valid;
+        if (!any)
+        {
+            throw new ArgumentException("At least one signature must be provided.", nameof(providedSignatures));
+        }
+
+        return matched ? CheckTimestamp(messageTimestamp) : VerificationResult.SignatureMismatch;
+    }
+
+    private VerificationResult CheckTimestamp(DateTimeOffset? messageTimestamp)
+    {
+        if (!_tolerance.HasValue)
+        {
+            return VerificationResult.Valid;
+        }
+
+        if (messageTimestamp is null)
+        {
+            throw new ArgumentException(
+                "A message timestamp is required because this verifier was configured with a tolerance.",
+                nameof(messageTimestamp));
+        }
+
+        TimeSpan skew = _clock() - messageTimestamp.Value;
+        if (skew < TimeSpan.Zero)
+        {
+            skew = skew.Negate();
+        }
+
+        return skew > _tolerance.Value ? VerificationResult.Expired : VerificationResult.Valid;
     }
 
     private static byte[] ToBytes(string secret)

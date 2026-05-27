@@ -17,7 +17,7 @@ public sealed class RequestSigner
 
     /// <summary>Creates a signer from a raw secret key.</summary>
     /// <param name="secret">The signing key bytes. Must not be empty.</param>
-    /// <param name="canonicalForm">How to build the string to sign. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
+    /// <param name="canonicalForm">How to build the bytes to sign. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
     /// <param name="algorithm">The HMAC algorithm. Defaults to <see cref="SignatureAlgorithm.HmacSha256"/>.</param>
     /// <param name="encoding">How to encode the signature. Defaults to <see cref="SignatureEncoding.Hex"/>.</param>
     /// <exception cref="ArgumentNullException"><paramref name="secret"/> is null.</exception>
@@ -46,7 +46,7 @@ public sealed class RequestSigner
 
     /// <summary>Creates a signer from a UTF-8 string secret.</summary>
     /// <param name="secret">The signing key. Must not be null or empty.</param>
-    /// <param name="canonicalForm">How to build the string to sign. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
+    /// <param name="canonicalForm">How to build the bytes to sign. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
     /// <param name="algorithm">The HMAC algorithm. Defaults to <see cref="SignatureAlgorithm.HmacSha256"/>.</param>
     /// <param name="encoding">How to encode the signature. Defaults to <see cref="SignatureEncoding.Hex"/>.</param>
     public RequestSigner(

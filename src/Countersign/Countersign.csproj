@@ -6,23 +6,44 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <!-- NuGet package metadata. Actual publish happens in #325. -->
+  <!-- NuGet package metadata. -->
   <PropertyGroup>
     <PackageId>Countersign</PackageId>
     <Version>0.1.0-alpha.1</Version>
-    <Description>Two-direction signing and webhook verification for payment/PSP integrations: sign outbound requests, verify inbound webhooks — with separate secrets and per-direction canonical forms.</Description>
+    <Title>Countersign</Title>
+    <Description>Two-direction signing and webhook verification for payment/PSP integrations: sign outbound requests, verify inbound webhooks — with separate secrets and per-direction canonical forms. Constant-time compare, replay tolerance, no runtime dependencies.</Description>
     <PackageTags>signing;hmac;webhook;verification;payments;psp;security</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageReleaseNotes>See the changelog: https://github.com/value-al/Countersign/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/value-al/Countersign</PackageProjectUrl>
     <RepositoryUrl>https://github.com/value-al/Countersign</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <!-- To add a package icon: drop a 128x128 PNG at assets/icon.png and uncomment the two lines below. -->
+    <!-- <PackageIcon>icon.png</PackageIcon> -->
+  </PropertyGroup>
+
+  <!-- Symbols + SourceLink so consumers can step into the source from a debugger. -->
+  <PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <!-- Deterministic, verifiable builds when running in CI. -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <!-- <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" /> -->
+  </ItemGroup>
+
+  <!-- Build-time only (PrivateAssets=all) — not a runtime dependency of the package. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

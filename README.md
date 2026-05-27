@@ -1,5 +1,9 @@
 # Countersign
 
+[![CI](https://github.com/value-al/Countersign/actions/workflows/ci.yml/badge.svg)](https://github.com/value-al/Countersign/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Countersign.svg)](https://www.nuget.org/packages/Countersign)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Two-direction signing and webhook verification for payment/PSP integrations — in one small, dependency-free .NET library.
 
 > **The insight behind it:** integrating a payment provider is two signing problems, not one.
@@ -16,6 +20,7 @@ to compare in constant time, a webhook secret that is *not* the API secret. It's
 - signing the wrong canonical form (raw body vs. `method+path+timestamp+body`),
 - reusing the API secret to verify webhooks instead of the dedicated webhook secret,
 - comparing signatures with `==` (timing leak) instead of a constant-time compare,
+- verifying a *re-serialized* body instead of the exact received bytes,
 - forgetting replay protection on the inbound timestamp.
 
 Countersign packages these as two clearly separated concerns: **`RequestSigner`** (outbound) and
@@ -27,7 +32,7 @@ Countersign packages these as two clearly separated concerns: **`RequestSigner`*
 dotnet add package Countersign
 ```
 
-Targets `netstandard2.0` and `net8.0`, no third-party dependencies.
+Targets `netstandard2.0` and `net8.0`. **No runtime dependencies.**
 
 ## Sign an outbound request
 
@@ -51,6 +56,9 @@ httpRequest.Headers.Add("X-Signature", signature);
 
 ## Verify an inbound webhook
 
+Verify over the **raw received bytes** — never a parsed-then-re-serialized body, which can differ
+byte-for-byte from what the provider signed.
+
 ```csharp
 using Countersign;
 
@@ -61,7 +69,7 @@ var verifier = new WebhookVerifier(
     tolerance: TimeSpan.FromMinutes(5)); // rejects stale/replayed messages
 
 var result = verifier.Verify(
-    new SignatureContext(rawBody, timestamp: headerTimestamp),
+    new SignatureContext(rawBodyBytes, timestamp: headerTimestamp),
     providedSignature: headerSignature,
     messageTimestamp: DateTimeOffset.FromUnixTimeSeconds(long.Parse(headerTimestamp)));
 
@@ -75,22 +83,65 @@ if (result != VerificationResult.Valid)
 Comparison is constant-time. When a `tolerance` is configured, `Verify` requires a `messageTimestamp`
 and returns `Expired` if it falls outside the window.
 
+### ASP.NET Core minimal API
+
+```csharp
+var verifier = new WebhookVerifier("whsec_...", CanonicalForms.TimestampDotBody, tolerance: TimeSpan.FromMinutes(5));
+
+app.MapPost("/webhooks/psp", async (HttpRequest req) =>
+{
+    using var ms = new MemoryStream();
+    await req.Body.CopyToAsync(ms);
+    byte[] rawBody = ms.ToArray();           // the exact bytes the provider signed
+
+    string timestamp = req.Headers["X-Timestamp"]!;
+    string signature = req.Headers["X-Signature"]!;
+
+    var result = verifier.Verify(
+        new SignatureContext(rawBody, timestamp: timestamp),
+        signature,
+        DateTimeOffset.FromUnixTimeSeconds(long.Parse(timestamp)));
+
+    return result == VerificationResult.Valid ? Results.Ok() : Results.Unauthorized();
+});
+```
+
+### Key rotation (multiple candidate signatures)
+
+When a provider sends signatures under both an old and a new key during rotation, pass them all —
+verification succeeds if **any** matches:
+
+```csharp
+var result = verifier.Verify(context, new[] { sigFromHeaderV1, sigFromHeaderV2 }, messageTimestamp);
+```
+
 ## Canonical forms
 
-A canonical form is just a `CanonicalFormBuilder` — `SignatureContext → string` — so you can supply your
-own for any provider. Presets cover the common cases:
+A canonical form is just a `CanonicalFormBuilder` — `SignatureContext → byte[]` — so you can supply your
+own for any provider. The presets emit ASCII metadata followed by the **raw body bytes**:
 
 | Preset | Produces | Typical use |
 | --- | --- | --- |
 | `CanonicalForms.RawBody` | `body` | many inbound webhooks |
-| `CanonicalForms.TimestampDotBody` | `"{timestamp}.{body}"` | Stripe-style signed webhooks |
-| `CanonicalForms.MethodPathTimestampBody` | `"{method}\n{path}\n{timestamp}\n{body}"` | outbound requests |
+| `CanonicalForms.TimestampDotBody` | `{timestamp}.` + `body` | Stripe-style signed webhooks |
+| `CanonicalForms.MethodPathTimestampBody` | `{method}\n{path}\n{timestamp}\n` + `body` | outbound requests |
+
+### Choosing one
+
+- Read the provider's docs for the **string-to-sign** (a.k.a. "signed payload" / "canonical request").
+- If it's just the body, use `RawBody`.
+- If it prefixes a timestamp (to bind the signature to a moment, for replay protection), use
+  `TimestampDotBody` — and configure a `tolerance`.
+- If it includes the HTTP method and path (typical for *outbound* request signing), use
+  `MethodPathTimestampBody`.
+- Anything else: write a one-line `CanonicalFormBuilder`. Match the provider's separators and byte order
+  exactly — a single stray newline changes the HMAC.
 
 ## Status
 
-`0.1.0-alpha` — core `Sign`/`Verify`, canonical-form presets, constant-time compare, and replay
-tolerance are implemented and covered by tests (including RFC 4231 known-answer vectors). Not yet
-published to NuGet.
+`0.1.0-alpha` — `Sign`/`Verify`, raw-byte bodies, canonical-form presets, constant-time compare, replay
+tolerance, and multi-signature verification are implemented and covered by 22 tests (including RFC 4231
+known-answer vectors). Not yet published to NuGet. See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
