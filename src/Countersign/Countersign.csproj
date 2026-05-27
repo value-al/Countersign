@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0 for broad reach (.NET Framework + Core), net8.0 for modern consumers. -->
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata. Actual publish happens in #325. -->
+  <PropertyGroup>
+    <PackageId>Countersign</PackageId>
+    <Version>0.1.0-alpha.1</Version>
+    <Description>Two-direction signing and webhook verification for payment/PSP integrations: sign outbound requests, verify inbound webhooks — with separate secrets and per-direction canonical forms.</Description>
+    <PackageTags>signing;hmac;webhook;verification;payments;psp;security</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!-- TODO(#325): set RepositoryUrl / PackageProjectUrl once the GitHub repo exists. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

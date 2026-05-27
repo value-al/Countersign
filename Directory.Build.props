@@ -1,0 +1,16 @@
+<Project>
+
+  <!-- Shared settings for every project in the repo. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <Authors>Aldiger</Authors>
+    <Company>Aldiger</Company>
+    <Copyright>Copyright (c) 2026 Aldiger</Copyright>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Countersign/Countersign.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Countersign.Tests/Countersign.Tests.csproj" />
+  </Folder>
+</Solution>
