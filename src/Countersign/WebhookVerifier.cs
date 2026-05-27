@@ -1,29 +1,48 @@
-using System.Text;
 using Countersign.Internal;
 
 namespace Countersign;
 
 /// <summary>
-/// Verifies inbound webhooks using the provider's webhook secret — which is normally a different
-/// secret from your API key. This is the "counter-verify" half of Countersign; the outbound half
-/// is <see cref="RequestSigner"/>. Comparison is constant-time, and an optional tolerance guards
-/// against replayed (stale) messages.
+/// Verifies inbound webhooks. This is the "counter-verify" half of Countersign; the outbound half is
+/// <see cref="RequestSigner"/>. For HMAC, comparison is constant-time; for RSA/ECDSA, the provider's
+/// public key verifies the signature. An optional tolerance guards against replayed (stale) messages.
+/// Pass an <see cref="ISignatureScheme"/> for RSA/ECDSA, or a string/byte secret for the HMAC default.
 /// </summary>
 public sealed class WebhookVerifier
 {
-    private readonly byte[] _webhookSecret;
+    private readonly ISignatureScheme _scheme;
     private readonly CanonicalFormBuilder _canonicalForm;
-    private readonly SignatureAlgorithm _algorithm;
     private readonly SignatureEncoding _encoding;
     private readonly TimeSpan? _tolerance;
     private readonly Func<DateTimeOffset> _clock;
 
-    /// <summary>Creates a verifier from a raw webhook secret.</summary>
+    /// <summary>Creates a verifier from a signature scheme (e.g. <see cref="RsaScheme"/>, <see cref="EcdsaScheme"/>, <see cref="HmacScheme"/>).</summary>
+    /// <param name="scheme">The verification strategy. For asymmetric schemes, build it with the provider's <b>public</b> key.</param>
+    /// <param name="canonicalForm">How the provider builds the bytes it signs. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
+    /// <param name="encoding">How the provider encodes the signature. Defaults to <see cref="SignatureEncoding.Hex"/>.</param>
+    /// <param name="tolerance">Optional maximum clock skew for the message timestamp. When set, verification requires a timestamp and rejects messages outside the window.</param>
+    /// <param name="clock">Optional time source, for testing. Defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="scheme"/> is null.</exception>
+    public WebhookVerifier(
+        ISignatureScheme scheme,
+        CanonicalFormBuilder? canonicalForm = null,
+        SignatureEncoding encoding = SignatureEncoding.Hex,
+        TimeSpan? tolerance = null,
+        Func<DateTimeOffset>? clock = null)
+    {
+        _scheme = scheme ?? throw new ArgumentNullException(nameof(scheme));
+        _canonicalForm = canonicalForm ?? CanonicalForms.RawBody;
+        _encoding = encoding;
+        _tolerance = tolerance;
+        _clock = clock ?? (() => DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>Creates an HMAC verifier from a raw webhook secret.</summary>
     /// <param name="webhookSecret">The provider's webhook signing key. Must not be empty.</param>
     /// <param name="canonicalForm">How the provider builds the bytes it signs. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
     /// <param name="algorithm">The HMAC algorithm. Defaults to <see cref="SignatureAlgorithm.HmacSha256"/>.</param>
     /// <param name="encoding">How the provider encodes the signature. Defaults to <see cref="SignatureEncoding.Hex"/>.</param>
-    /// <param name="tolerance">Optional maximum clock skew for the message timestamp. When set, verification requires a timestamp and rejects messages outside the window.</param>
+    /// <param name="tolerance">Optional maximum clock skew for the message timestamp.</param>
     /// <param name="clock">Optional time source, for testing. Defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
     /// <exception cref="ArgumentNullException"><paramref name="webhookSecret"/> is null.</exception>
     /// <exception cref="ArgumentException"><paramref name="webhookSecret"/> is empty.</exception>
@@ -34,26 +53,11 @@ public sealed class WebhookVerifier
         SignatureEncoding encoding = SignatureEncoding.Hex,
         TimeSpan? tolerance = null,
         Func<DateTimeOffset>? clock = null)
+        : this(new HmacScheme(webhookSecret, algorithm), canonicalForm, encoding, tolerance, clock)
     {
-        if (webhookSecret is null)
-        {
-            throw new ArgumentNullException(nameof(webhookSecret));
-        }
-
-        if (webhookSecret.Length == 0)
-        {
-            throw new ArgumentException("Webhook secret must not be empty.", nameof(webhookSecret));
-        }
-
-        _webhookSecret = webhookSecret;
-        _canonicalForm = canonicalForm ?? CanonicalForms.RawBody;
-        _algorithm = algorithm;
-        _encoding = encoding;
-        _tolerance = tolerance;
-        _clock = clock ?? (() => DateTimeOffset.UtcNow);
     }
 
-    /// <summary>Creates a verifier from a UTF-8 string webhook secret.</summary>
+    /// <summary>Creates an HMAC verifier from a UTF-8 string webhook secret.</summary>
     /// <param name="webhookSecret">The provider's webhook signing key. Must not be null or empty.</param>
     /// <param name="canonicalForm">How the provider builds the bytes it signs. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
     /// <param name="algorithm">The HMAC algorithm. Defaults to <see cref="SignatureAlgorithm.HmacSha256"/>.</param>
@@ -67,7 +71,7 @@ public sealed class WebhookVerifier
         SignatureEncoding encoding = SignatureEncoding.Hex,
         TimeSpan? tolerance = null,
         Func<DateTimeOffset>? clock = null)
-        : this(ToBytes(webhookSecret), canonicalForm, algorithm, encoding, tolerance, clock)
+        : this(new HmacScheme(webhookSecret, algorithm), canonicalForm, encoding, tolerance, clock)
     {
     }
 
@@ -90,13 +94,12 @@ public sealed class WebhookVerifier
             throw new ArgumentNullException(nameof(providedSignature));
         }
 
-        byte[] expected = Mac.Compute(_webhookSecret, _canonicalForm(context), _algorithm);
         if (!SignatureEncoder.TryDecode(providedSignature, _encoding, out byte[] provided))
         {
             return VerificationResult.MalformedSignature;
         }
 
-        if (!Mac.FixedTimeEquals(expected, provided))
+        if (!_scheme.Verify(_canonicalForm(context), provided))
         {
             return VerificationResult.SignatureMismatch;
         }
@@ -126,7 +129,7 @@ public sealed class WebhookVerifier
             throw new ArgumentNullException(nameof(providedSignatures));
         }
 
-        byte[] expected = Mac.Compute(_webhookSecret, _canonicalForm(context), _algorithm);
+        byte[] message = _canonicalForm(context);
 
         bool any = false;
         bool matched = false;
@@ -135,7 +138,7 @@ public sealed class WebhookVerifier
             any = true;
             if (candidate is not null
                 && SignatureEncoder.TryDecode(candidate, _encoding, out byte[] provided)
-                && Mac.FixedTimeEquals(expected, provided))
+                && _scheme.Verify(message, provided))
             {
                 matched = true; // keep iterating so timing doesn't reveal which candidate matched
             }
@@ -170,15 +173,5 @@ public sealed class WebhookVerifier
         }
 
         return skew > _tolerance.Value ? VerificationResult.Expired : VerificationResult.Valid;
-    }
-
-    private static byte[] ToBytes(string secret)
-    {
-        if (secret is null)
-        {
-            throw new ArgumentNullException(nameof(secret));
-        }
-
-        return Encoding.UTF8.GetBytes(secret);
     }
 }

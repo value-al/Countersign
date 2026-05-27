@@ -9,16 +9,48 @@ namespace Countersign
         public static readonly Countersign.CanonicalFormBuilder RawBody;
         public static readonly Countersign.CanonicalFormBuilder TimestampDotBody;
     }
+    public sealed class EcdsaScheme : Countersign.ISignatureScheme
+    {
+        public EcdsaScheme(System.Security.Cryptography.ECDsa key, System.Security.Cryptography.HashAlgorithmName? hashAlgorithm = default, Countersign.EcdsaSignatureFormat format = 0) { }
+        public byte[] Sign(byte[] message) { }
+        public bool Verify(byte[] message, byte[] signature) { }
+    }
+    public enum EcdsaSignatureFormat
+    {
+        Der = 0,
+        Ieee1363 = 1,
+    }
+    public sealed class HmacScheme : Countersign.ISignatureScheme
+    {
+        public HmacScheme(byte[] secret, Countersign.SignatureAlgorithm algorithm = 0) { }
+        public HmacScheme(string secret, Countersign.SignatureAlgorithm algorithm = 0) { }
+        public byte[] Sign(byte[] message) { }
+        public bool Verify(byte[] message, byte[] signature) { }
+    }
+    public interface ISignatureScheme
+    {
+        byte[] Sign(byte[] message);
+        bool Verify(byte[] message, byte[] signature);
+    }
     public sealed class RequestSigner
     {
+        public RequestSigner(Countersign.ISignatureScheme scheme, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureEncoding encoding = 0) { }
         public RequestSigner(byte[] secret, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureAlgorithm algorithm = 0, Countersign.SignatureEncoding encoding = 0) { }
         public RequestSigner(string secret, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureAlgorithm algorithm = 0, Countersign.SignatureEncoding encoding = 0) { }
         public string Sign(Countersign.SignatureContext context) { }
+    }
+    public sealed class RsaScheme : Countersign.ISignatureScheme
+    {
+        public RsaScheme(System.Security.Cryptography.RSA key, System.Security.Cryptography.HashAlgorithmName? hashAlgorithm = default, System.Security.Cryptography.RSASignaturePadding? padding = null) { }
+        public byte[] Sign(byte[] message) { }
+        public bool Verify(byte[] message, byte[] signature) { }
     }
     public enum SignatureAlgorithm
     {
         HmacSha256 = 0,
         HmacSha512 = 1,
+        HmacSha384 = 2,
+        HmacSha1 = 3,
     }
     public sealed class SignatureContext
     {
@@ -45,6 +77,7 @@ namespace Countersign
     }
     public sealed class WebhookVerifier
     {
+        public WebhookVerifier(Countersign.ISignatureScheme scheme, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureEncoding encoding = 0, System.TimeSpan? tolerance = default, System.Func<System.DateTimeOffset>? clock = null) { }
         public WebhookVerifier(byte[] webhookSecret, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureAlgorithm algorithm = 0, Countersign.SignatureEncoding encoding = 0, System.TimeSpan? tolerance = default, System.Func<System.DateTimeOffset>? clock = null) { }
         public WebhookVerifier(string webhookSecret, Countersign.CanonicalFormBuilder? canonicalForm = null, Countersign.SignatureAlgorithm algorithm = 0, Countersign.SignatureEncoding encoding = 0, System.TimeSpan? tolerance = default, System.Func<System.DateTimeOffset>? clock = null) { }
         public Countersign.VerificationResult Verify(Countersign.SignatureContext context, System.Collections.Generic.IEnumerable<string> providedSignatures, System.DateTimeOffset? messageTimestamp = default) { }

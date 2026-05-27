@@ -9,7 +9,7 @@
   <!-- NuGet package metadata. -->
   <PropertyGroup>
     <PackageId>Countersign</PackageId>
-    <Version>0.1.0-alpha.1</Version>
+    <Version>0.2.0-alpha.1</Version>
     <Title>Countersign</Title>
     <Description>Two-direction signing and webhook verification for payment/PSP integrations: sign outbound requests, verify inbound webhooks — with separate secrets and per-direction canonical forms. Constant-time compare, replay tolerance, no runtime dependencies.</Description>
     <PackageTags>signing;hmac;webhook;verification;payments;psp;security</PackageTags>

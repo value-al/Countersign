@@ -115,6 +115,37 @@ verification succeeds if **any** matches:
 var result = verifier.Verify(context, new[] { sigFromHeaderV1, sigFromHeaderV2 }, messageTimestamp);
 ```
 
+## Signature schemes
+
+HMAC is the default, but the same `Sign`/`Verify` works with any `ISignatureScheme`. For providers that
+sign with a private key, verify with their **public key** by passing an asymmetric scheme:
+
+| Scheme | Type | Notes |
+| --- | --- | --- |
+| `HmacScheme` | symmetric | HMAC-SHA256/384/512 (and SHA-1 for legacy). Same secret both sides; constant-time verify. |
+| `RsaScheme` | asymmetric | RSA — PKCS#1 v1.5 or PSS. Verify with the provider's public key. |
+| `EcdsaScheme` | asymmetric | ECDSA — DER **or** IEEE-P1363 signatures (providers differ; match theirs). |
+
+```csharp
+// Verify an RSA-signed webhook with the provider's public key:
+using var rsa = RSA.Create();
+rsa.ImportFromPem(providerPublicKeyPem); // net8+
+var verifier = new WebhookVerifier(
+    new RsaScheme(rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pss),
+    CanonicalForms.RawBody,
+    SignatureEncoding.Base64);
+
+var result = verifier.Verify(new SignatureContext(rawBody), headerSignature);
+
+// ECDSA — JOSE/ES256 uses the IEEE-P1363 format; classic APIs use DER:
+var ec = ECDsa.Create();
+ec.ImportFromPem(providerPublicKeyPem);
+var es256 = new EcdsaScheme(ec, HashAlgorithmName.SHA256, EcdsaSignatureFormat.Ieee1363);
+```
+
+All built-in schemes use the .NET BCL, so the core stays **dependency-free**. Ed25519 ships separately
+as `Countersign.Ed25519` (it needs a crypto dependency) to keep that promise.
+
 ## Canonical forms
 
 A canonical form is just a `CanonicalFormBuilder` — `SignatureContext → byte[]` — so you can supply your
@@ -150,10 +181,11 @@ and how to report a vulnerability privately.
 
 ## Status
 
-`0.1.0-alpha` — `Sign`/`Verify`, raw-byte bodies, canonical-form presets, constant-time compare, replay
-tolerance, and multi-signature verification are implemented and covered by 23 tests (including RFC 4231
-known-answer vectors), running on `net8.0` and `net48`. The public API is snapshot-tested. Not yet
-published to NuGet. See [CHANGELOG.md](CHANGELOG.md).
+`0.2.0-alpha` — HMAC (SHA-256/384/512/1), RSA (PKCS#1 + PSS), and ECDSA (DER + IEEE-P1363) schemes,
+raw-byte bodies, canonical-form presets, constant-time HMAC compare, replay tolerance, and
+multi-signature verification, covered by 36 tests (including RFC 4231 known-answer vectors and
+RSA/ECDSA BCL-interop), running on `net8.0` and `net48`. The public API is snapshot-tested.
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

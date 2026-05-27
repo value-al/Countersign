@@ -6,12 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-alpha.1] - 2026-05-27
+
 ### Added
-- Public API snapshot test (PublicApiGenerator) that guards against accidental breaking changes.
-- `net48` test leg that exercises the `netstandard2.0` build on .NET Framework.
-- `SECURITY.md` (threat model + private vulnerability reporting), `CONTRIBUTING.md`,
-  `CODE_OF_CONDUCT.md`, issue/PR templates, and Dependabot.
-- Release automation: a GitHub Actions workflow publishes to NuGet on a `v*` tag.
+- `ISignatureScheme` abstraction; `RequestSigner` and `WebhookVerifier` gain scheme-based constructors.
+- `RsaScheme` — asymmetric RSA signatures, PKCS#1 v1.5 and PSS padding.
+- `EcdsaScheme` — asymmetric ECDSA signatures, both DER and IEEE-P1363 signature formats.
+- `HmacScheme` — the existing HMAC, now a first-class, reusable scheme.
+- HMAC-SHA384 and HMAC-SHA1 (legacy, provider-mandated only) algorithms.
+
+### Notes
+- **Backward compatible** — the existing string/byte-secret HMAC constructors are unchanged.
+- Core stays dependency-free (RSA/ECDSA use the BCL). Ed25519 will ship as a separate
+  `Countersign.Ed25519` package so the core keeps zero runtime dependencies.
 
 ## [0.1.0-alpha.1] - 2026-05-27
 
@@ -27,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional replay tolerance with an injectable clock.
 - Multi-signature verification (verify-any) for key rotation.
 - Multi-targets `netstandard2.0` and `net8.0`; no runtime dependencies.
+- Public API snapshot test (PublicApiGenerator); `net48` test leg exercising the netstandard2.0 build.
+- `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, issue/PR templates, Dependabot.
+- Release automation: a GitHub Actions workflow publishes to NuGet on a `v*` tag.
 
-[Unreleased]: https://github.com/value-al/Countersign/compare/v0.1.0-alpha.1...HEAD
+[Unreleased]: https://github.com/value-al/Countersign/compare/v0.2.0-alpha.1...HEAD
+[0.2.0-alpha.1]: https://github.com/value-al/Countersign/compare/v0.1.0-alpha.1...v0.2.0-alpha.1
 [0.1.0-alpha.1]: https://github.com/value-al/Countersign/releases/tag/v0.1.0-alpha.1

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 
 namespace Countersign.Internal;
@@ -30,12 +31,16 @@ internal static class Mac
 #endif
     }
 
+    [SuppressMessage("Security", "CA5350:Do Not Use Weak Cryptographic Algorithms",
+        Justification = "HMAC-SHA1 is offered only for legacy provider compatibility. HMAC-SHA1 is not broken as a MAC, unlike bare SHA-1 collisions.")]
     private static HMAC Create(SignatureAlgorithm algorithm, byte[] key)
     {
         return algorithm switch
         {
             SignatureAlgorithm.HmacSha256 => new HMACSHA256(key),
+            SignatureAlgorithm.HmacSha384 => new HMACSHA384(key),
             SignatureAlgorithm.HmacSha512 => new HMACSHA512(key),
+            SignatureAlgorithm.HmacSha1 => new HMACSHA1(key),
             _ => throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, "Unsupported signature algorithm."),
         };
     }

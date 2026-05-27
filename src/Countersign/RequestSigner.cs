@@ -1,21 +1,35 @@
-using System.Text;
 using Countersign.Internal;
 
 namespace Countersign;
 
 /// <summary>
-/// Signs outbound requests with your secret. This is the "sign" half of Countersign; the inbound
-/// half is <see cref="WebhookVerifier"/>. The two are deliberately separate because outbound and
-/// inbound usually use different secrets and different canonical forms.
+/// Signs outbound requests. This is the "sign" half of Countersign; the inbound half is
+/// <see cref="WebhookVerifier"/>. The two are deliberately separate because outbound and inbound
+/// usually use different secrets/keys and different canonical forms. Pass an <see cref="ISignatureScheme"/>
+/// for RSA/ECDSA, or a string/byte secret for the HMAC default.
 /// </summary>
 public sealed class RequestSigner
 {
-    private readonly byte[] _secret;
+    private readonly ISignatureScheme _scheme;
     private readonly CanonicalFormBuilder _canonicalForm;
-    private readonly SignatureAlgorithm _algorithm;
     private readonly SignatureEncoding _encoding;
 
-    /// <summary>Creates a signer from a raw secret key.</summary>
+    /// <summary>Creates a signer from a signature scheme (e.g. <see cref="RsaScheme"/>, <see cref="EcdsaScheme"/>, <see cref="HmacScheme"/>).</summary>
+    /// <param name="scheme">The signing strategy.</param>
+    /// <param name="canonicalForm">How to build the bytes to sign. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
+    /// <param name="encoding">How to encode the signature. Defaults to <see cref="SignatureEncoding.Hex"/>.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="scheme"/> is null.</exception>
+    public RequestSigner(
+        ISignatureScheme scheme,
+        CanonicalFormBuilder? canonicalForm = null,
+        SignatureEncoding encoding = SignatureEncoding.Hex)
+    {
+        _scheme = scheme ?? throw new ArgumentNullException(nameof(scheme));
+        _canonicalForm = canonicalForm ?? CanonicalForms.RawBody;
+        _encoding = encoding;
+    }
+
+    /// <summary>Creates an HMAC signer from a raw secret key.</summary>
     /// <param name="secret">The signing key bytes. Must not be empty.</param>
     /// <param name="canonicalForm">How to build the bytes to sign. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
     /// <param name="algorithm">The HMAC algorithm. Defaults to <see cref="SignatureAlgorithm.HmacSha256"/>.</param>
@@ -27,24 +41,11 @@ public sealed class RequestSigner
         CanonicalFormBuilder? canonicalForm = null,
         SignatureAlgorithm algorithm = SignatureAlgorithm.HmacSha256,
         SignatureEncoding encoding = SignatureEncoding.Hex)
+        : this(new HmacScheme(secret, algorithm), canonicalForm, encoding)
     {
-        if (secret is null)
-        {
-            throw new ArgumentNullException(nameof(secret));
-        }
-
-        if (secret.Length == 0)
-        {
-            throw new ArgumentException("Secret must not be empty.", nameof(secret));
-        }
-
-        _secret = secret;
-        _canonicalForm = canonicalForm ?? CanonicalForms.RawBody;
-        _algorithm = algorithm;
-        _encoding = encoding;
     }
 
-    /// <summary>Creates a signer from a UTF-8 string secret.</summary>
+    /// <summary>Creates an HMAC signer from a UTF-8 string secret.</summary>
     /// <param name="secret">The signing key. Must not be null or empty.</param>
     /// <param name="canonicalForm">How to build the bytes to sign. Defaults to <see cref="CanonicalForms.RawBody"/>.</param>
     /// <param name="algorithm">The HMAC algorithm. Defaults to <see cref="SignatureAlgorithm.HmacSha256"/>.</param>
@@ -54,7 +55,7 @@ public sealed class RequestSigner
         CanonicalFormBuilder? canonicalForm = null,
         SignatureAlgorithm algorithm = SignatureAlgorithm.HmacSha256,
         SignatureEncoding encoding = SignatureEncoding.Hex)
-        : this(ToBytes(secret), canonicalForm, algorithm, encoding)
+        : this(new HmacScheme(secret, algorithm), canonicalForm, encoding)
     {
     }
 
@@ -69,17 +70,7 @@ public sealed class RequestSigner
             throw new ArgumentNullException(nameof(context));
         }
 
-        byte[] mac = Mac.Compute(_secret, _canonicalForm(context), _algorithm);
-        return SignatureEncoder.Encode(mac, _encoding);
-    }
-
-    private static byte[] ToBytes(string secret)
-    {
-        if (secret is null)
-        {
-            throw new ArgumentNullException(nameof(secret));
-        }
-
-        return Encoding.UTF8.GetBytes(secret);
+        byte[] signature = _scheme.Sign(_canonicalForm(context));
+        return SignatureEncoder.Encode(signature, _encoding);
     }
 }
