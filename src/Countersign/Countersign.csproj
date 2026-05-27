@@ -19,8 +19,7 @@
     <PackageProjectUrl>https://github.com/value-al/Countersign</PackageProjectUrl>
     <RepositoryUrl>https://github.com/value-al/Countersign</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <!-- To add a package icon: drop a 128x128 PNG at assets/icon.png and uncomment the two lines below. -->
-    <!-- <PackageIcon>icon.png</PackageIcon> -->
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
 
   <!-- Symbols + SourceLink so consumers can step into the source from a debugger. -->
@@ -38,7 +37,7 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-    <!-- <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" /> -->
+    <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <!-- Build-time only (PrivateAssets=all) — not a runtime dependency of the package. -->
