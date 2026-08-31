@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-31
+
+First stable release. No API changes since 0.2.0-alpha.1; the public surface is frozen under
+semantic versioning from here.
+
+### Why now
+- In production use as the webhook boundary of [Remit](https://github.com/value-al/Remit), a
+  reference money-movement backend: every inbound PSP webhook is verified with `WebhookVerifier`
+  over the raw bytes, per-provider secret, `TimestampDotBody`, five-minute tolerance — and its
+  test-suite signs with `RequestSigner`, so both directions are exercised end to end.
+- 36 tests including RFC 4231 known-answer vectors and RSA/ECDSA BCL interop, on net8.0 and net48;
+  the public API is snapshot-tested.
+
+### Changed
+- Repository-local `nuget.config` pinning nuget.org, so builds never touch a private feed.
+- README: a "Design notes" section recording the three decisions the library is built on.
+
 ## [0.2.0-alpha.1] - 2026-05-27
 
 ### Added

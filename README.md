@@ -179,13 +179,31 @@ Countersign is a signing/verification **primitive**, so its boundaries matter:
 Treat every non-`Valid` result as "reject". See [SECURITY.md](SECURITY.md) for the full threat model
 and how to report a vulnerability privately.
 
+## Design notes
+
+Three decisions carry the library; everything else follows from them.
+
+1. **Two types, not one.** `RequestSigner` and `WebhookVerifier` are separate classes with
+   separate constructors on purpose. The most common integration bug is reusing the API secret
+   to verify webhooks, or signing outbound with the inbound canonical form; two types make that
+   a compile-time shape rather than a runtime surprise.
+2. **Bytes in, not strings.** `SignatureContext` takes the raw body bytes and canonical forms
+   operate on bytes. A provider signs the bytes it sent; anything re-serialised from a parsed
+   object can differ by a space and fail — or, worse, be made to pass. The string overloads
+   exist for convenience on the outbound side only.
+3. **The scheme is a plug-in; the policy is not.** `ISignatureScheme` lets HMAC, RSA and ECDSA
+   (and a future Ed25519 package) share one verifier, but constant-time comparison, replay
+   tolerance and multi-signature acceptance are the verifier's and cannot be turned off by a
+   scheme. A scheme decides *how* to sign; it never decides *whether* a result is valid.
+
 ## Status
 
-`0.2.0-alpha` — HMAC (SHA-256/384/512/1), RSA (PKCS#1 + PSS), and ECDSA (DER + IEEE-P1363) schemes,
-raw-byte bodies, canonical-form presets, constant-time HMAC compare, replay tolerance, and
-multi-signature verification, covered by 36 tests (including RFC 4231 known-answer vectors and
-RSA/ECDSA BCL-interop), running on `net8.0` and `net48`. The public API is snapshot-tested.
-See [CHANGELOG.md](CHANGELOG.md).
+`1.0.0` — stable; the public API is frozen under semantic versioning. HMAC (SHA-256/384/512/1),
+RSA (PKCS#1 + PSS) and ECDSA (DER + IEEE-P1363) schemes, raw-byte bodies, canonical-form presets,
+constant-time HMAC compare, replay tolerance, multi-signature verification; 36 tests including
+RFC 4231 known-answer vectors and RSA/ECDSA BCL interop, on `net8.0` and `net48`; the public
+API is snapshot-tested. In production use as the webhook boundary of
+[Remit](https://github.com/value-al/Remit). See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
