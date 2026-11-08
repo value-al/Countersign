@@ -7,7 +7,6 @@ this current: add a line when you find debt, remove it when it's paid.
 
 | Question | Why it matters | Until then |
 |---|---|---|
-| **Public repo: agents may not run here until the owner decides.** The protocol's non-negotiable is that agents run only in private repos. | Agent branches, PRs and decision notes would be public; issues and labels on a public repo can be written by anyone, so the taskrunner's "only the owner's labels" check carries more weight | No taskrunner, no scheduled agents (`scheduled_agents: []`). The merge bot is installed: it uses `pull_request_target`, never checks out or runs PR code, and merges only with the owner's `human-approved`. Options: keep it public and owner-run only, write a public-repo exception into the protocol, or develop in a private repo and mirror releases |
 
 ## Code
 
@@ -31,4 +30,4 @@ this current: add a line when you find debt, remove it when it's paid.
 | The `dotnet` stack profile assumes an app (PostgreSQL, Coolify, Playwright E2E, one-command run); there is no library variant | Moving beyond L0 ("an app on a stack without a profile stays at L0") | Add a library variant to the profile: build, unit, architecture, mutation, public API snapshot, pack |
 | No holdout scenarios | QA agent | For a library, scenarios would be consumer programs (sign with a provider's documented example, verify a captured webhook) run by the QA runner |
 | No mutation gate | L2 gate | Baseline recorded in `project.yml`; set `mutation_score_changed_code` before L2 |
-| No machine account fork, reviewer bot or taskrunner | Agents building unattended | Comes with the protocol platform, and only after the public-repo question is decided |
+| No machine account fork, reviewer bot or taskrunner | Agents building unattended | Comes with the protocol platform |
