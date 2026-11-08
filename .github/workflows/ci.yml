@@ -1,3 +1,6 @@
+# Checks on every PR and on main. The job names are the check names the merge
+# bot requires (project.yml: required_checks), so rename them only together.
+# The merge bot needs a result on every PR, so PRs have no paths-ignore.
 name: CI
 
 on:
@@ -6,9 +9,17 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
@@ -17,11 +28,14 @@ jobs:
           dotnet-version: 8.0.x
       - run: dotnet restore
       - run: dotnet build --no-restore -c Release
+      - name: Architecture tests
+        run: dotnet test tests/Countersign.ArchitectureTests --no-build -c Release --verbosity normal
       - name: Test (net8.0)
         run: dotnet test --no-build -c Release -f net8.0 --verbosity normal
 
   build-windows:
     runs-on: windows-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
@@ -32,3 +46,18 @@ jobs:
       - run: dotnet build --no-restore -c Release
       - name: Test (net8.0 + net48)
         run: dotnet test --no-build -c Release --verbosity normal
+
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Secrets (gitleaks, whole history)
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.3 git /repo --no-banner --redact
+      # Fails on ERROR findings only; warnings are tracked in docs/tech-debt.md.
+      - name: Static analysis (Semgrep CE)
+        run: >-
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:1.140.0
+          semgrep scan --config p/default --metrics off --severity ERROR --error
+          --exclude bin --exclude obj --exclude artifacts --exclude StrykerOutput
