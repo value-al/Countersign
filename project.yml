@@ -1,0 +1,86 @@
+# Project settings for the value-al AI Development Protocol.
+# Owned by Aldiger: changes need human-approved (see the protocol's merge bot rules).
+
+name: Countersign
+repo: value-al/Countersign
+app: Countersign                 # App option on the value-al Portfolio Project
+stack_profile: dotnet            # see "Stack profiles" in the protocol; library only, no PostgreSQL
+level: light                     # value-al Playbook level (light | full)
+
+vision: >
+  A small, dependency-free .NET library for the two signing problems of a
+  payment/PSP integration: sign outbound requests with your key, verify
+  inbound webhooks with theirs, with separate secrets and canonical forms
+  so the two can't be mixed up. Constant-time compare, replay tolerance,
+  exact-byte signing. Published on NuGet under the MIT licence.
+
+never: # what the library must never do
+  - Take a runtime dependency (the core uses the .NET base class library only)
+  - Compare a signature or MAC with anything but a fixed-time compare
+  - Let a scheme decide whether a webhook is valid, or let a caller turn off tolerance once configured
+  - Verify a re-serialised body instead of the exact received bytes
+  - Break the public API outside a major version (PublicApi.approved.txt)
+  - Log, store or print secrets, keys or signatures
+
+commands:
+  install: dotnet restore
+  build: dotnet build -c Release            # warnings as errors, analyzers on
+  check: dotnet test -c Release             # unit + architecture tests; net48 runs on Windows only
+  unit: dotnet test tests/Countersign.Tests -c Release
+  architecture: dotnet test tests/Countersign.ArchitectureTests -c Release   # NetArchTest rules
+  mutation: dotnet tool restore && dotnet stryker --since:main             # Stryker.NET, changed code; not in CI
+  pack: dotnet pack -c Release -o artifacts
+  run_local: null                           # a library: nothing to run; the tests are the harness
+
+# A library has nothing hosted. The only environment is the NuGet package,
+# published by .github/workflows/release.yml when the owner pushes a v* tag.
+environments:
+  nuget:
+    url: https://www.nuget.org/packages/Countersign
+    deploy: git tag vX.Y.Z && git push origin vX.Y.Z   # owner only; needs NUGET_API_KEY
+  staging: null                   # not applicable: library (docs/tech-debt.md)
+  production: null                # not applicable: library (docs/tech-debt.md)
+
+# Paths that make a change High tier: the merge bot needs human-approved.
+# All signing and verification code is security-critical.
+needs_human:
+  - project.yml
+  - .github/**                    # CI config and the release (deploy) workflow
+  - .githooks/**
+  - src/Countersign/**            # signing, verification, crypto, constant-time compare
+  - tests/Countersign.Tests/PublicApi.approved.txt   # public API (semantic versioning)
+  - "**/*.csproj"                 # dependencies, target frameworks, package metadata
+  - Directory.Build.props         # warnings as errors, analyzers
+  - nuget.config                  # package source
+  - dotnet-tools.json
+  - Countersign.slnx
+  - SECURITY.md                   # threat model and disclosure policy
+  - LICENSE
+
+# Existing test files: modifying, deleting or renaming them needs human-approved.
+protected_tests:
+  - tests/Countersign.Tests/**
+  - tests/Countersign.ArchitectureTests/**
+
+# Check runs the merge bot must see green on the PR's head commit, as name@source.
+required_checks:
+  - build-linux@github-actions
+  - build-windows@github-actions
+  - scan@github-actions
+  - reviewer@value-al-bot
+
+quality:
+  ci_must_pass: [build-linux, build-windows, architecture, gitleaks, semgrep]
+  public_api_snapshot: tests/Countersign.Tests/PublicApi.approved.txt
+  # Whole library, Stryker.NET 5.0.0, 2026-11-08: 66.31 % (185 killed, 39 survived, 2 timeout, 56 no coverage)
+  mutation_score_changed_code: null   # gate set when L2 is near; baseline above
+
+budgets:
+  cost_per_task_eur: null
+  monthly_cap_eur: null
+
+autonomy:
+  level: L0                       # every PR needs human-approved
+  since: 2026-11-08
+
+scheduled_agents: []              # none: public repo, see docs/tech-debt.md

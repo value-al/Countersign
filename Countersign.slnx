@@ -3,6 +3,7 @@
     <Project Path="src/Countersign/Countersign.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Countersign.ArchitectureTests/Countersign.ArchitectureTests.csproj" />
     <Project Path="tests/Countersign.Tests/Countersign.Tests.csproj" />
   </Folder>
 </Solution>
