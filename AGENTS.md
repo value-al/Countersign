@@ -6,9 +6,10 @@ AI Development Protocol at autonomy level **L2** (owner override, 2026-11-08): l
 merge through the merge bot once CI and the reviewer pass; high-risk PRs and
 protected paths need the owner's `human-approved`.
 
-**This repo is public.** The protocol lets agents run only in private repos.
-Until the owner decides (see `docs/tech-debt.md`), no agent runs here
-unattended; these notes are for sessions the owner starts himself.
+**This repository is public.** Agents run here under the protocol's public repo
+exception (2026-11-08): the taskrunner takes only issues the owner wrote and approved,
+and comments never reach agents. Everything you commit is visible to the world: no real
+credentials, no client names, nothing private.
 
 ## What this is
 
